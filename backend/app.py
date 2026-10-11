@@ -1,57 +1,125 @@
 import os
-import sys
-
-BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
-
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from datetime import timedelta
-from config import Config
-from database import client
+from dotenv import load_dotenv
+from database import get_scholarship_collection
+from routes_auth import auth_bp
+from routes_profile import profile_bp
+from routes_scholarships_extras import extras_bp
+
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=Config.CORS_ORIGINS)
 
-app.config["JWT_SECRET_KEY"] = Config.JWT_SECRET_KEY
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=Config.JWT_ACCESS_TOKEN_EXPIRES_HOURS)
+CORS(app, 
+     origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
+# JWT Configuration
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev_secret")
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_HEADER_NAME"] = "Authorization"
+app.config["JWT_HEADER_TYPE"] = "Bearer"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
 jwt = JWTManager(app)
 
-# ---------- Register Blueprints ----------
-from routes.auth_routes import auth_bp
-from routes.profile_routes import profile_bp
-from routes.scholarship_routes import sch_bp
+@jwt.unauthorized_loader
+def missing_token(reason):
+    return jsonify({"error": "Missing token", "reason": reason}), 401
 
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
-app.register_blueprint(profile_bp, url_prefix="/api/profile")
-app.register_blueprint(sch_bp, url_prefix="/api/scholarships")
+@jwt.invalid_token_loader
+def invalid_token(reason):
+    return jsonify({"error": "Invalid token", "reason": reason}), 401
+
+@jwt.expired_token_loader
+def expired_token(jwt_header, jwt_payload):
+    return jsonify({"error": "Token expired"}), 401
+
+@jwt.revoked_token_loader
+def revoked_token(jwt_header, jwt_payload):
+    return jsonify({"error": "Token revoked"}), 401
+
+# ⭐ Handle OPTIONS preflight BEFORE JWT runs
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = app.make_default_options_response()
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
 
 
-@app.route("/api/health", methods=["GET"])
+# Register blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(profile_bp)
+app.register_blueprint(extras_bp)
+
+
+# ---------------- ROUTES ----------------
+
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"message": "ScholarNexus API running 🚀", "status": "success"}), 200
+
+
+@app.route('/health', methods=['GET'])
 def health():
-    try:
-        client.admin.command("ping")
-        return jsonify({
-            "app": Config.APP_NAME,
-            "status": "ok",
-            "db": "connected",
-            "env": Config.FLASK_ENV
-        }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "healthy"}), 200
 
 
-@app.route("/", methods=["GET"])
-def root():
-    return jsonify({
-        "app": Config.APP_NAME,
-        "message": "ScholarNexus API is running",
-        "version": "1.0.0"
-    }), 200
+@app.route('/api/scholarships/', methods=['GET'])
+def list_scholarships():
+    collection = get_scholarship_collection()
+    results = list(collection.find({}, {"_id": 0}))
+    return jsonify({"results": results, "count": len(results)}), 200
 
 
-if __name__ == "__main__":
-    print(f"🚀 Starting {Config.APP_NAME} backend on port {Config.FLASK_PORT}")
-    app.run(host="0.0.0.0", port=Config.FLASK_PORT, debug=(Config.FLASK_ENV == "development"))
+@app.route('/api/scholarships/search', methods=['GET'])
+def search_scholarships():
+    collection = get_scholarship_collection()
+    q = request.args.get('q', '').strip()
+    state = request.args.get('state')
+    category = request.args.get('category')
+    gender = request.args.get('gender')
+    course = request.args.get('course')
+    max_income = request.args.get('max_income')
+    min_percentage = request.args.get('min_percentage')
+    sort_by = request.args.get('sort_by', 'application_deadline')
+    order = request.args.get('order', 'asc')
+    
+    query = {}
+    if q:
+        query["$or"] = [
+            {"scholarship_name": {"$regex": q, "$options": "i"}},
+            {"provider": {"$regex": q, "$options": "i"}}
+        ]
+    if state and state != "All": query["state"] = state
+    if category and category != "All": query["category"] = category
+    if gender and gender != "All": query["gender"] = gender
+    if course and course != "All": query["course"] = course
+    if max_income: query["max_income"] = {"$gte": int(max_income)}
+    if min_percentage: query["minimum_percentage"] = {"$lte": int(min_percentage)}
+    
+    sort_dir = 1 if order == "asc" else -1
+    results = list(collection.find(query, {"_id": 0}).sort(sort_by, sort_dir))
+    return jsonify({"results": results, "count": len(results)}), 200
+
+
+@app.route('/api/scholarships/<scholarship_id>', methods=['GET'])
+def get_scholarship(scholarship_id):
+    collection = get_scholarship_collection()
+    doc = collection.find_one({"scholarship_id": scholarship_id}, {"_id": 0})
+    if not doc:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(doc), 200
+
+
+if __name__ == '__main__':
+    port = int(os.getenv("FLASK_PORT", 5000))
+    print(f"🚀 ScholarNexus Backend on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=True)
