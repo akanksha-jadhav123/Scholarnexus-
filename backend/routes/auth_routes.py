@@ -7,14 +7,12 @@ from utils.validators import is_valid_email, is_valid_password
 
 auth_bp = Blueprint("auth", __name__)
 
-
 @auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json() or {}
     name = data.get("name")
     email = data.get("email")
     password = data.get("password")
-    role = data.get("role", "student")
 
     if not name or not email or not password:
         return jsonify({"error": "Name, email, password required"}), 400
@@ -26,11 +24,13 @@ def register():
         return jsonify({"error": "Email already registered"}), 409
 
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
+    # SECURITY: role is ALWAYS student on public registration
     db.Users.insert_one({
         "name": name,
         "email": email,
-        "password_hash": hashed,
-        "role": role,
+        "password_hash": hashed,    # bytes
+        "role": "student",
         "bookmarks": [],
         "created_at": datetime.utcnow()
     })
@@ -49,7 +49,21 @@ def login():
     user = db.Users.find_one({"email": email})
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
-    if not bcrypt.checkpw(password.encode("utf-8"), user["password_hash"]):
+
+    stored_hash = user.get("password_hash")
+    if not stored_hash:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    # Convert to bytes if stored as string (fixes old data)
+    if isinstance(stored_hash, str):
+        stored_hash = stored_hash.encode("utf-8")
+
+    try:
+        match = bcrypt.checkpw(password.encode("utf-8"), stored_hash)
+    except Exception as e:
+        return jsonify({"error": f"Auth error: {str(e)}"}), 500
+
+    if not match:
         return jsonify({"error": "Invalid credentials"}), 401
 
     token = create_access_token(

@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Welcome</title>
+<!-- <link rel="stylesheet" href="resources/css/style.css"> -->
+<!-- <link rel="stylesheet" href="resources/css/bootstrap.min.css"> -->
+
+<!-- <script src="resources/js/jquery.min.js"></script> -->
+<!-- <script src="resources/js/bootstrap.min.js"></script> -->
+<!-- <link rel="stylesheet" href="resources/css/spinner.css"> -->
+<script type="text/javascript">
+window.location.hash="no-back-button";
+window.location.hash="Again-No-back-button";//again because google chrome don't insert first hash into history
+window.onhashchange=function(){window.location.hash="no-back-button";}
+
+function callspinner()
+{ 
+	$("#fadeOut").fadeTo("slow",0.5);
+	document.getElementById("spinner").style.display="block";
+	document.getElementById("spinner2").style.display="block";
+	timer=setTimeout(function(){window.location='logout';}, 3000);
+	
+}
+</script>
+<style type="text/css">
+.error {
+	position: absolute;
+	left: 0;
+	color: #e9a42b;
+	margin: -50px 0 0 33.5%;
+	padding: 10px
+}
+.error h1 {
+	font-size: 30px;
+	text-align: center
+}
+
+</style>
+</head>
+
+<body onload="timer=setTimeout(function(){callspinner();}, 2000)">
+
+<div id="spinner" class="whirly-loader" style="display: none;">
+  Loadingâ¦
+</div>
+<div id="spinner2" style="display: none;
+    font-size: xx-large;
+    font-style: oblique;
+    font-family: fantasy;padding-top:400px;
+    margin-left: 400px;position: absolute;
+	z-index:5;">
+   You are being redirected to Login Page...
+</div>
+<div id="fadeOut">
+
+
+<header style="height:180px">
+
+<div class="">
+        <div class="row">
+        	<div class="col-md-2 ">
+        	
+            <img src="resources/images/logo.png">
+<!--             <img src="resources/images/logo.png"> -->
+            </div>
+            <div class="col-md-6">
+            </div>
+        </div>
+</div>       
+</header>
+
+<div class="clear"></div>
+<div class="blue5" style="height:auto; background:#fcb335">
+        <div class="container">
+                <div class="row">
+                		<div class="col-md-2"></div>
+                        <div class="col-md-10"><br>
+                        <h1 style="text-align:left; font-size:30px">Oops..! Exception Occurred<span style="font-size:100px;">&nbsp;!</span></h1></div>
+                        <div class="col-md-2"></div>
+                        <div class="col-md-8" style="font-size:18px">
+                        <p>Exception occurred. Please try refining data and submit again.</p>
+                        <br>
+                        <p>OR</p>
+                        <br> 
+                        <p>Mail us at : <img src="resources/images/vidyasaarathi_mailid.jpg" style="width:18%;"></p>
+                        <br><br><br><br>
+                        </div>
+                </div>
+        </div>
+</div>
+<div style="height:30px;"></div>
+<footer style="background:#0e91bd">
+	<div class="container">
+        <ul class="menu">
+        </ul>
+    </div>
+</footer>
+</div>
+</body>
+</html>

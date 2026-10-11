@@ -47,17 +47,19 @@ export default function Home() {
           <div className="row align-items-center">
             <div className="col-lg-7">
               <div style={{ marginBottom: "20px" }}>
-  <LogoFull size={48} color="white" />
-  <span className="home-badge" style={{ marginLeft: "12px", marginBottom: 0 }}>
-    Smart Student Funding Assistant
-  </span>
-</div>
+                <LogoFull size={48} color="white" />
+                <span className="home-badge" style={{ marginLeft: "12px", marginBottom: 0 }}>
+                  Smart Student Funding Assistant
+                </span>
+              </div>
               <h1 className="home-title">
                 Find the <span style={{ textDecoration: "underline", textDecorationColor: "#fbbf24" }}>right scholarship</span> for your profile
               </h1>
               <p className="home-subtitle">
                 ScholarNexus analyzes your academic, financial, and demographic profile to recommend scholarships you're actually eligible for — with transparent match scores and clear explanations.
               </p>
+
+              {/* CTA BUTTONS */}
               <div className="d-flex gap-3 flex-wrap">
                 {user ? (
                   <Link to="/dashboard" className="btn-sn">
@@ -68,8 +70,29 @@ export default function Home() {
                     <Link to="/register" className="btn-sn">
                       Get Started Free →
                     </Link>
-                    <Link to="/login" className="btn-sn-outline" style={{ background: "rgba(255,255,255,0.15)", color: "white", borderColor: "white" }}>
+                    <Link
+                      to="/login"
+                      className="btn-sn-outline"
+                      style={{
+                        background: "rgba(255,255,255,0.15)",
+                        color: "white",
+                        borderColor: "white"
+                      }}
+                    >
                       Login
+                    </Link>
+                    <Link
+                      to="/login"
+                      state={{ isAdmin: true }}
+                      className="btn-sn-outline"
+                      style={{
+                        background: "rgba(220,53,69,0.35)",
+                        color: "white",
+                        borderColor: "#dc3545",
+                        fontWeight: 600
+                      }}
+                    >
+                      🛠️ Admin Login
                     </Link>
                   </>
                 )}
@@ -77,7 +100,7 @@ export default function Home() {
 
               <div className="home-stats">
                 <div>
-                  <span className="home-stat-value">12+</span>
+                  <span className="home-stat-value">93+</span>
                   <span className="home-stat-label">Verified Scholarships</span>
                 </div>
                 <div>
@@ -90,6 +113,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
             <div className="col-lg-5 d-none d-lg-block">
               <div style={{
                 background: "rgba(255,255,255,0.15)",
@@ -186,9 +210,21 @@ export default function Home() {
           <p style={{ fontSize: "1.1rem", opacity: 0.95, marginBottom: "30px", maxWidth: "600px", margin: "0 auto 30px" }}>
             Join ScholarNexus today and get personalized matches in seconds.
           </p>
-          <Link to={user ? "/dashboard" : "/register"} className="btn-sn" style={{ background: "white", color: "var(--primary)" }}>
-            {user ? "Go to Dashboard →" : "Start Free →"}
-          </Link>
+          <div className="d-flex gap-3 justify-content-center flex-wrap">
+            <Link to={user ? "/dashboard" : "/register"} className="btn-sn" style={{ background: "white", color: "var(--primary)" }}>
+              {user ? "Go to Dashboard →" : "Start Free →"}
+            </Link>
+            {!user && (
+              <Link
+                to="/login"
+                state={{ isAdmin: true }}
+                className="btn-sn-outline"
+                style={{ background: "rgba(220,53,69,0.3)", color: "white", borderColor: "#dc3545" }}
+              >
+                🛠️ Admin Login
+              </Link>
+            )}
+          </div>
         </div>
       </section>
     </div>
