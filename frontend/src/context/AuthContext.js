@@ -17,14 +17,17 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = (data) => {
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify({
-      name: data.name, email: data.email, role: data.role
-    }));
-    setToken(data.token);
-    setUser({ name: data.name, email: data.email, role: data.role });
+const login = (data) => {
+  const userObj = data.user || {
+    name: data.name,
+    email: data.email,
+    role: data.role,
   };
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user", JSON.stringify(userObj));
+  setToken(data.token);
+  setUser(userObj);
+};
 
   const logout = () => {
     localStorage.removeItem("token");

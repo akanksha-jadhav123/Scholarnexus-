@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { registerUser, loginUser } from "../services/api";
+import { registerUser } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { LogoFull } from "../components/Logo";
+
 
 export default function Register() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -11,21 +12,20 @@ export default function Register() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await registerUser(form);
-      const res = await loginUser({ email: form.email, password: form.password });
-      login(res.data);
-      navigate("/profile");
-    } catch (err) {
-      setError(err.response?.data?.error || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+  try {
+    const res = await registerUser(form);
+    login(res.data);
+    navigate("/profile");
+  } catch (err) {
+    setError(err.response?.data?.error || "Registration failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const passwordStrength = () => {
     const p = form.password;
