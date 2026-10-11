@@ -21,3 +21,17 @@ frontend/dist/
 /frontend/.env
 
 /frontend/.env
+
+# Ignore environment files containing secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+
+# Ignore environment files containing secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
