@@ -6,6 +6,8 @@ import {
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { LogoIcon } from "../components/Logo";
+import ScraperCard from "../components/ScraperCard";
+import SourcePanel from "../components/SourcePanel";
 
 export default function Dashboard() {
   const { user } = useAuth();

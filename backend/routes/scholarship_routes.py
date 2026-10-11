@@ -3,8 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from bson import ObjectId
 from datetime import datetime, timedelta
 from database import db
-from services.eligibility_service import check_eligibility
-from services.recommendation_service import recommend_scholarships
+from services.eligibility_service import EligibilityChecker
+from services.recommendation_service import RecommendationEngine
+from services.comparison_service import ComparisonService
 
 sch_bp = Blueprint("scholarships", __name__)
 
@@ -77,7 +78,7 @@ def eligibility(sid):
     scholarship = db.Scholarships.find_one({"scholarship_id": sid}, {"_id": 0})
     if not scholarship:
         return jsonify({"error": "Scholarship not found"}), 404
-    result = check_eligibility(profile, scholarship)
+    result = EligibilityChecker.check(profile, scholarship)
     return jsonify(result), 200
 
 
@@ -88,11 +89,24 @@ def recommendations():
     profile = db.StudentProfiles.find_one({"user_id": user_id}) or {}
     if not profile:
         return jsonify({"error": "Complete your profile first"}), 400
+
+    # Optional query params
+    limit = int(request.args.get("limit", 20))
+    min_score = int(request.args.get("min_score", 20))
+
     scholarships = list(db.Scholarships.find({"status": "Active"}, {"_id": 0}))
-    results = recommend_scholarships(profile, scholarships)
+    results = RecommendationEngine.recommend(profile, scholarships, limit=limit, min_score=min_score)
+
     return jsonify({
         "count": len(results),
-        "recommendations": results[:20]
+        "profile_summary": {
+            "state": profile.get("state"),
+            "category": profile.get("category"),
+            "income": profile.get("income"),
+            "percentage": profile.get("percentage"),
+            "course": profile.get("course")
+        },
+        "recommendations": results
     }), 200
 
 
@@ -103,8 +117,23 @@ def compare():
     ids = data.get("scholarship_ids", [])
     if len(ids) < 2:
         return jsonify({"error": "Provide at least 2 scholarship IDs"}), 400
+    if len(ids) > 5:
+        return jsonify({"error": "Maximum 5 scholarships can be compared"}), 400
+
     items = list(db.Scholarships.find({"scholarship_id": {"$in": ids}}, {"_id": 0}))
-    return jsonify(items), 200
+    if len(items) < 2:
+        return jsonify({"error": "Could not find at least 2 valid scholarships"}), 404
+
+    # Preserve original order
+    ordered = []
+    for sid in ids:
+        for item in items:
+            if item["scholarship_id"] == sid:
+                ordered.append(item)
+                break
+
+    result = ComparisonService.compare(ordered)
+    return jsonify(result), 200
 
 
 @sch_bp.route("/bookmark/<sid>", methods=["POST"])
