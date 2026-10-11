@@ -38,11 +38,31 @@ def search_scholarships():
         query["category"] = {"$in": [args["category"], "All"]}
     if args.get("gender") and args["gender"] != "All":
         query["gender"] = {"$in": [args["gender"], "All"]}
-    if args.get("max_income"):
-        try:
-            query["max_family_income"] = {"$gte": float(args["max_income"])}
-        except ValueError:
-            pass
+    if args.get("status") and args["status"] != "All":
+        query["status"] = args["status"]
+        if args.get("q"):
+            query["$or"] = [
+        {
+            "scholarship_name": {
+                "$regex": args["q"],
+                "$options": "i"
+            }
+        },
+        {
+            "provider": {
+                "$regex": args["q"],
+                "$options": "i"
+            }
+        },
+    ]
+
+        if args.get("status") and args["status"] != "All":
+            query["status"] = args["status"]
+        if args.get("max_income"):
+                try:
+                    query["max_family_income"] = {"$gte": float(args["max_income"])}
+                except ValueError:
+                    pass
     if args.get("min_percentage"):
         try:
             query["minimum_percentage"] = {"$lte": float(args["min_percentage"])}

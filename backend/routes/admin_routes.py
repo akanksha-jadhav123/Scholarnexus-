@@ -195,3 +195,45 @@ def update_user_role(user_id):
         return jsonify({"message": f"Role updated to {new_role}"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+@admin_bp.route(
+    "/scholarships/<scholarship_id>/verify",
+    methods=["POST"]
+)
+@jwt_required()
+def verify_scholarship(scholarship_id):
+    try:
+        if not is_admin():
+            return jsonify({
+                "error": "Admin only"
+            }), 403
+
+        result = db.Scholarships.update_one(
+            {
+                "scholarship_id": scholarship_id
+            },
+            {
+                "$set": {
+                    "verified": True,
+                    "verified_at": datetime.utcnow()
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            return jsonify({
+                "error": "Scholarship not found"
+            }), 404
+
+        return jsonify({
+            "message": "Scholarship verified",
+            "scholarship_id": scholarship_id,
+            "verified": True
+        }), 200
+
+    except Exception as e:
+        logger.exception("verify scholarship failed")
+
+        return jsonify({
+            "error": str(e)
+        }), 500

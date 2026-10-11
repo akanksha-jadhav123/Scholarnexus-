@@ -22,6 +22,7 @@ import Applications from "./pages/Applications";
 import Documents from "./pages/Documents";
 import Notifications from "./pages/Notifications";
 import StudentRoute from "./components/StudentRoute";
+import FloatingChatbot from "./components/FloatingChatbot";
 
 export default function App() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
 <Route path="/scholarships" element={<ScholarshipList />} />
 <Route path="/scholarships/:id" element={<ScholarshipDetails />} />
       </Routes>
+      <FloatingChatbot />
       <div className="sn-footer">
         © 2026 <strong>ScholarNexus</strong> — Smart Student Funding Assistant
       </div>

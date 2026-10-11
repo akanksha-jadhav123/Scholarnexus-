@@ -63,6 +63,8 @@ from routes.crawler_routes import crawler_bp
 from routes.admin_routes import admin_bp
 from routes.applications_routes import apps_bp
 from routes.chatbot_routes import chat_bp
+from routes.documents_routes import documents_bp
+from routes.notifications_routes import notifications_bp
 
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(profile_bp, url_prefix="/api/profile")
@@ -70,6 +72,15 @@ app.register_blueprint(sch_bp, url_prefix="/api/scholarships")
 app.register_blueprint(admin_bp, url_prefix="/api/admin")
 app.register_blueprint(apps_bp, url_prefix="/api/applications")
 app.register_blueprint(chat_bp, url_prefix="/api/chatbot")
+app.register_blueprint(
+    documents_bp,
+    url_prefix="/api/documents"
+)
+
+app.register_blueprint(
+    notifications_bp,
+    url_prefix="/api/notifications"
+)
 app.register_blueprint(scraper_bp, url_prefix="/api/scraper")
 app.register_blueprint(crawler_bp, url_prefix="/api/crawler")
 

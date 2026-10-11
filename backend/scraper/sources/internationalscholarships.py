@@ -1,41 +1,48 @@
+"""Scrape scholarship detail pages; expand roundup articles into individual awards."""
 from scraper.base_scraper import BaseScraper
+from scraper.amount_extractor import extract_amount_from_html, extract_currency_from_html, extract_currency_from_text, extract_awards_from_article, is_roundup_title
 import logging
-logger = logging.getLogger(__name__)
+from urllib.parse import urljoin
 
+logger = logging.getLogger(__name__)
 
 class InternationalScholarshipsScraper(BaseScraper):
     def __init__(self):
-        super().__init__(
-            source_name="internationalscholarships.com",
-            base_url="https://www.internationalscholarships.com/",
-            delay=2
-        )
+        super().__init__(source_name='internationalscholarships.com', base_url='https://www.internationalscholarships.com/', delay=2)
 
     def parse(self, soup):
         results, seen = [], set()
-        for a in soup.find_all("a", href=True):
-            text = a.get_text(strip=True)
-            href = a["href"]
-            if not text or len(text) < 15 or text in seen:
+        for a in soup.find_all('a', href=True):
+            title = a.get_text(' ', strip=True)
+            url = urljoin(self.base_url, a['href'])
+            if not title or len(title) < 15 or title.lower() in seen:
                 continue
-            if not any(k in text.lower() for k in ["scholarship", "fellowship", "grant", "award"]):
+            if not any(k in title.lower() for k in ['scholarship', 'fellowship', 'grant', 'award']):
                 continue
-            seen.add(text)
-            if href.startswith("/"):
-                href = "https://www.internationalscholarships.com" + href
-            elif not href.startswith("http"):
+            if not url.startswith('https://www.internationalscholarships.com/'):
+                # Allow other article paths on this domain only.
+                if not url.startswith('https://www.internationalscholarships.com/'):
+                    continue
+            seen.add(title.lower())
+            html = self.fetch(url)
+            if not html:
                 continue
-            results.append({
-                "scholarship_name": text[:200],
-                "provider": "InternationalScholarships",
-                "source": "internationalscholarships.com",
-                "source_type": "International",
-                "source_trust_score": 7,
-                "official_source": self.base_url,
-                "application_url": href,
-                "status": "Active"
-            })
+            if is_roundup_title(title):
+                # A guide contains multiple scholarships; extract each award section separately.
+                for item in extract_awards_from_article(html, url, 'InternationalScholarships', self.source_name):
+                    key = (item['scholarship_name'].lower(), item['application_url'])
+                    if key not in seen and len(results) < 40:
+                        results.append(item)
+                        seen.add(key[0])
+            else:
+                amount = extract_amount_from_html(html)
+                results.append({
+                    'scholarship_name': title[:200], 'provider': 'InternationalScholarships',
+                    'source': self.source_name, 'source_type': 'International', 'source_trust_score': 7,
+                    'official_source': url, 'source_url': url, 'application_url': url,
+                    'scholarship_amount': amount, 'amount_max': amount, 'scholarship_currency': extract_currency_from_html(html), 'status': 'Active'
+                })
             if len(results) >= 40:
                 break
-        logger.info(f"[{self.source_name}] Found {len(results)}")
+        logger.info('[%s] Found %s award records', self.source_name, len(results))
         return results

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL,
+  baseURL: process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api",
   headers: { "Content-Type": "application/json" }
 });
 
@@ -44,6 +44,9 @@ export const compareScholarships = (ids) => api.post("/scholarships/compare", { 
 export const toggleBookmark = (id) => api.post(`/scholarships/bookmark/${id}`);
 export const getBookmarks = () => api.get("/scholarships/bookmarks");
 export const getUpcomingDeadlines = () => api.get("/scholarships/upcoming-deadlines");
+
+// ---------- CHATBOT ----------
+export const askChatbot = (question) => api.post("/chatbot/ask", { question });
 
 // ---------- HEALTH ----------
 export const healthCheck = () => api.get("/health");

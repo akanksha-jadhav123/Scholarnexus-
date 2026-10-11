@@ -39,7 +39,7 @@ export default function AdminScholarships() {
   };
 
   const remove = async (id) => {
-    if (!window.confirm(`Permanently DELETE ${id}? This cannot be undone.`)) return;
+    if (!window.confirm(`Deactivate ${id}?`)) return;
     await api.delete(`/admin/scholarships/${id}`);
     load();
   };
@@ -149,7 +149,7 @@ export default function AdminScholarships() {
                           onClick={() => remove(s.scholarship_id)}
                           style={{ fontSize: "0.7rem", padding: "2px 6px" }}
                         >
-                          ✕
+                          Deactivate
                         </button>
                       </div>
                     </td>
