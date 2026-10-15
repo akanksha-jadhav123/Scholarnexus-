@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
+import api, { deleteScholarship } from "../services/api";
+import ManualScholarshipForm from "../components/ManualScholarshipForm";
 
 export default function AdminScholarships() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Active");
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
   useEffect(() => { load(); }, [statusFilter]);
@@ -17,9 +19,33 @@ export default function AdminScholarships() {
       if (statusFilter) params.status = statusFilter;
       const res = await api.get("/scholarships/search", { params });
       setItems(res.data.results || []);
+    } catch (e) {
+      console.error("Load failed:", e);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreate = () => {
+    setEditing(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (scholarship) => {
+    setEditing(scholarship);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    setEditing(null);
+    load();
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditing(null);
   };
 
   const deactivate = async (id) => {
@@ -34,23 +60,48 @@ export default function AdminScholarships() {
   };
 
   const verify = async (id) => {
-    await api.post(`/admin/scholarships/${id}/verify`);
-    load();
+    try {
+      await api.post(`/admin/scholarships/${id}/verify`);
+      load();
+    } catch (e) {
+      alert(e.response?.data?.error || "Verify failed");
+    }
   };
 
-  const remove = async (id) => {
-    if (!window.confirm(`Deactivate ${id}?`)) return;
-    await api.delete(`/admin/scholarships/${id}`);
-    load();
+  const hardDelete = async (id) => {
+    if (!window.confirm(
+      `⚠️ PERMANENTLY DELETE ${id}?\n\nThis cannot be undone.`
+    )) return;
+    try {
+      await deleteScholarship(id);
+      load();
+    } catch (e) {
+      alert(e.response?.data?.error || "Delete failed");
+    }
   };
 
   return (
     <div className="animate-in">
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h2 style={{ fontWeight: 800, margin: 0 }}>📚 Manage Scholarships</h2>
-        <span className="badge bg-primary">{items.length} records</span>
+        <div className="d-flex gap-2 align-items-center">
+          <span className="badge bg-primary">{items.length} records</span>
+          <button className="btn-sn" onClick={handleCreate}>
+            ➕ Add Scholarship
+          </button>
+        </div>
       </div>
 
+      {/* MANUAL ENTRY FORM */}
+      {showForm && (
+        <ManualScholarshipForm
+          editData={editing}
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+        />
+      )}
+
+      {/* SEARCH */}
       <div className="sn-card mb-3">
         <div className="row g-2">
           <div className="col-md-6">
@@ -63,7 +114,11 @@ export default function AdminScholarships() {
             />
           </div>
           <div className="col-md-3">
-            <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select
+              className="form-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="">All statuses</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -76,8 +131,17 @@ export default function AdminScholarships() {
         </div>
       </div>
 
+      {/* TABLE */}
       {loading ? (
         <div className="text-center py-4">Loading...</div>
+      ) : items.length === 0 ? (
+        <div className="sn-card text-center py-5">
+          <div style={{ fontSize: "3rem" }}>📭</div>
+          <p className="text-muted mb-3">No scholarships found.</p>
+          <button className="btn-sn" onClick={handleCreate}>
+            ➕ Add the first one
+          </button>
+        </div>
       ) : (
         <div className="sn-card">
           <div className="table-responsive">
@@ -91,39 +155,63 @@ export default function AdminScholarships() {
                   <th>Amount</th>
                   <th>Deadline</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th style={{ minWidth: "230px" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((s) => (
                   <tr key={s.scholarship_id}>
-                    <td><code style={{ fontSize: "0.75rem" }}>{s.scholarship_id}</code></td>
-                    <td title={s.scholarship_name}>
-                      {s.scholarship_name?.slice(0, 40)}{s.scholarship_name?.length > 40 ? "..." : ""}
-                    </td>
-                    <td>{s.provider?.slice(0, 20)}</td>
                     <td>
-                      <span className="badge bg-secondary" style={{ fontSize: "0.7rem" }}>
-                        {s.source || "-"}
+                      <code style={{ fontSize: "0.72rem" }}>{s.scholarship_id}</code>
+                    </td>
+                    <td title={s.scholarship_name} style={{ maxWidth: "220px" }}>
+                      {s.scholarship_name?.slice(0, 40)}
+                      {s.scholarship_name?.length > 40 ? "…" : ""}
+                    </td>
+                    <td style={{ fontSize: "0.85rem" }}>
+                      {s.provider?.slice(0, 25)}
+                    </td>
+                    <td>
+                      <span className="badge bg-secondary" style={{ fontSize: "0.68rem" }}>
+                        {s.source || "—"}
                       </span>
                     </td>
-                    <td>{s.scholarship_amount ? `₹${s.scholarship_amount.toLocaleString()}` : "-"}</td>
-                    <td>{s.application_deadline || "-"}</td>
+                    <td style={{ fontSize: "0.85rem" }}>
+                      {s.scholarship_amount
+                        ? `₹${Number(s.scholarship_amount).toLocaleString("en-IN")}`
+                        : "—"}
+                    </td>
+                    <td style={{ fontSize: "0.85rem" }}>
+                      {s.application_deadline || "—"}
+                    </td>
                     <td>
-                      <span className={`badge ${
-                        s.status === "Active" ? "bg-success" :
-                        s.status === "Expired" ? "bg-secondary" : "bg-warning"
-                      }`}>
+                      <span
+                        className={`badge ${
+                          s.status === "Active"
+                            ? "bg-success"
+                            : s.status === "Expired"
+                            ? "bg-secondary"
+                            : "bg-warning text-dark"
+                        }`}
+                      >
                         {s.status}
                       </span>
                     </td>
                     <td>
-                      <div className="d-flex gap-1">
+                      <div className="d-flex gap-1 flex-wrap">
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          title="Edit"
+                          onClick={() => handleEdit(s)}
+                          style={{ fontSize: "0.7rem", padding: "2px 8px" }}
+                        >
+                          ✏️ Edit
+                        </button>
                         <button
                           className="btn btn-sm btn-outline-success"
-                          title="Verify"
+                          title="Mark verified"
                           onClick={() => verify(s.scholarship_id)}
-                          style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+                          style={{ fontSize: "0.7rem", padding: "2px 8px" }}
                         >
                           ✓
                         </button>
@@ -131,25 +219,26 @@ export default function AdminScholarships() {
                           <button
                             className="btn btn-sm btn-outline-warning"
                             onClick={() => deactivate(s.scholarship_id)}
-                            style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+                            style={{ fontSize: "0.7rem", padding: "2px 8px" }}
                           >
-                            Deactivate
+                            ⏸ Deactivate
                           </button>
                         ) : (
                           <button
                             className="btn btn-sm btn-outline-success"
                             onClick={() => activate(s.scholarship_id)}
-                            style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+                            style={{ fontSize: "0.7rem", padding: "2px 8px" }}
                           >
-                            Activate
+                            ▶ Activate
                           </button>
                         )}
                         <button
                           className="btn btn-sm btn-outline-danger"
-                          onClick={() => remove(s.scholarship_id)}
-                          style={{ fontSize: "0.7rem", padding: "2px 6px" }}
+                          title="Permanently delete"
+                          onClick={() => hardDelete(s.scholarship_id)}
+                          style={{ fontSize: "0.7rem", padding: "2px 8px" }}
                         >
-                          Deactivate
+                          🗑 Delete
                         </button>
                       </div>
                     </td>

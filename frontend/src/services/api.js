@@ -77,4 +77,9 @@ export const getCrawlerSources = () => api.get("/crawler/sources");
 export const getCrawlerStats = () => api.get("/crawler/stats");
 export const runCrawlerSync = () => api.post("/crawler/sync");
 
+// ---------- ADMIN MANUAL ENTRY ----------
+export const createScholarship = (data) => api.post("/admin/scholarships", data);
+export const updateScholarship = (id, data) => api.put(`/admin/scholarships/${id}`, data);
+
+
 export default api;
